@@ -4,6 +4,7 @@ DOWN = "down"
 MINX = 1
 MAXX = 7
 MINY = 1
+BIGNUM = 1000000000000
 def checkCollision(cave, form, pos, direction):
     dX = -1 if direction == LEFT else 1 if direction == RIGHT else 0
     dY = -1 if direction == DOWN else 0
@@ -33,13 +34,15 @@ cave = set()
 height = 0
 jetNum = 0
 formNum = 0
-count = 0
-mils = 0
+stopAfterState = [-1, 0, 0] # forms, cur height, exp height
+cache = {}
 for i in range(1000000000000):
-    count = count + 1 if count < 9999 else 0
-    if count == 0:
-        mils += 1
-        print("done", mils, "M, or ", mils/1000000000000*100, "%")
+    if stopAfterState[0] == 0:
+        expHeight = stopAfterState[2] + height - stopAfterState[1]
+        print("Stop state reached! cur height", height, "Expected height:", expHeight)
+        input("Press Enter to continue...")
+    if stopAfterState[0] >= 0:
+        stopAfterState[0] -= 1
     form = forms[formNum]
     formNum = formNum + 1 if formNum < len(forms)-1 else 0
     y = height + 4
@@ -47,6 +50,25 @@ for i in range(1000000000000):
     while True:
         jet = LEFT if jets[jetNum] == '<' else RIGHT
         jetNum = jetNum + 1 if jetNum < len(jets)-1 else 0
+        if jetNum == 0:
+            state = (formNum, x, y-height-4)
+            if state not in cache:
+                cache[state] = (i, height)
+            else:
+                prevState = cache[state]
+                remaining = BIGNUM - i
+                cycleLength = i - prevState[0]
+                growth = height - prevState[1]
+                cycles = int(remaining / cycleLength)
+                mod = remaining % cycleLength
+                expHeight = height + growth * cycles
+                print("Fell:", i, "height:", height, "form: ", formNum, "pos:", x, y - height - 4)
+                print("Cache hit!! cache fell:", prevState[0], "cache height:", prevState[1], "cycle=", cycleLength,
+                      "growth:", growth, "remaining:", remaining, "cycle size=", cycleLength, "cycles left=", cycles, "mod: ", mod, "Expected height: ", expHeight)
+                if stopAfterState[0] == -1:
+                    stopAfterState = [mod-1, height, expHeight]
+                # input("Press Enter to continue...")
+                cache[state] = (i, height)
         if not checkCollision(cave, form, (x, y), jet):
             x = x-1 if jet == LEFT else x+1
         if not checkCollision(cave, form, (x, y), DOWN):
